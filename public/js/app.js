@@ -3248,15 +3248,32 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 /* harmony default export */ __webpack_exports__["default"] = ({
   data: function data() {
     return {
       mapICenter: {
-        lat: 32.6536305,
-        lng: -96.9418801
+        lat: 40.7178,
+        lng: -74.0431
       },
-      communities: "",
+      homes: "",
+      home: "",
+      neighbours: {},
       infoContent: "",
+      mPrice: "",
+      mType: "",
       display_mode: 3,
       infoWindowPos: {
         lat: 0,
@@ -3264,6 +3281,12 @@ __webpack_require__.r(__webpack_exports__);
       },
       infoWinOpen: false,
       currentMidx: null,
+      mFilterForm: new Form({
+        type: "",
+        pNeighbour: "",
+        price: "",
+        address: ""
+      }),
       infoOptions: {
         pixelOffset: {
           width: 0,
@@ -3273,12 +3296,12 @@ __webpack_require__.r(__webpack_exports__);
     };
   },
   methods: {
-    toggleInfoWindow: function toggleInfoWindow(community, idx) {
+    toggleInfoWindow: function toggleInfoWindow(home, idx) {
       this.infoWindowPos = {
-        lat: Number(community.lat),
-        lng: Number(community.lng)
+        lat: Number(home.lat),
+        lng: Number(home.lng)
       };
-      this.infoContent = this.getInfoWindowContent(community); //check if its the same marker that was selected if yes toggle
+      this.infoContent = this.getInfoWindowContent(home); //check if its the same marker that was selected if yes toggle
 
       if (this.currentMidx == idx) {
         this.infoWinOpen = !this.infoWinOpen;
@@ -3288,13 +3311,59 @@ __webpack_require__.r(__webpack_exports__);
           this.currentMidx = idx;
         }
     },
-    getInfoWindowContent: function getInfoWindowContent(community) {
-      return "<div class=\"map-card\">\n                    <div class=\"card-image\">\n                        <figure class=\"image is-4by3\">\n                            <img src=\"/uploads/".concat(community.banner, "\" alt=\"Placeholder image\">\n                        </figure>\n                    </div>\n                    <div class=\"card-content\">\n                        <div class=\"media\">\n                        <div class=\"media-content\">\n                            <p class=\"title is-4\">").concat(community.name, "</p>\n                        </div>\n                        </div>\n                        <div class=\"content\">\n                        ").concat(community.location, "\n                        </div>\n                    </div>\n                    </div>");
+    loadHomesOnMap: function loadHomesOnMap() {
+      var _this = this;
+
+      this.mFilterForm.post("/api/home-map-house-list-filter").then(function (_ref) {
+        var data = _ref.data;
+        _this.homes = data;
+      });
+    },
+    getInfoWindowContent: function getInfoWindowContent(home) {
+      return "<div class=\"map-property\">\n              <a href=\"#\"><img src=\"/uploads/homes/".concat(home.featured_image, "\" alt=\"\"></a>\n              <h6><a href=\"#\">").concat(home.title, "</a></h6>\n              <h5>$").concat(home.price, "</h5>\n              <p></p>\n              </div>");
+    },
+    getHomes: function getHomes() {
+      var _this2 = this;
+
+      axios.get("/api/home-map-houseList").then(function (res) {
+        _this2.homes = res.data;
+        var price = [];
+        var mRange = [];
+        var type = [];
+        $.each(res.data, function (key, value) {
+          price.push(value.price);
+          if (type.indexOf(value.type) == -1) type.push(value.type);
+        });
+        _this2.mType = type;
+        var max = Math.max.apply(Math, price);
+        var min = Math.min.apply(Math, price);
+        var incrementVal = 25000;
+
+        while (min < max) {
+          var p = [min, min + incrementVal];
+          min = min + incrementVal;
+          mRange.push(p);
+        }
+
+        _this2.mPrice = mRange; // this.$Progress.finish();
+      })["catch"](function (error) {
+        console.log(error);
+      });
+    },
+    loadHomeNeighbour: function loadHomeNeighbour() {
+      var _this3 = this;
+
+      axios.get("api/home-neighbour").then(function (_ref2) {
+        var data = _ref2.data;
+        return _this3.neighbours = data;
+      });
     }
   },
   mounted: function mounted() {
-    console.log("Component mounted.");
-  }
+    this.getHomes();
+    this.loadHomeNeighbour();
+  },
+  created: function created() {}
 });
 
 /***/ }),
@@ -44495,12 +44564,267 @@ var render = function() {
     "div",
     { staticClass: "mapsearch-area bg-blue plr-140 ptb-50" },
     [
-      _vm._m(0),
+      _c("div", { staticClass: "container" }, [
+        _c("div", { staticClass: "row" }, [
+          _c("div", { staticClass: "col-md-3 col-sm-6 col-xs-12 form-group" }, [
+            _c("input", {
+              directives: [
+                {
+                  name: "model",
+                  rawName: "v-model",
+                  value: _vm.mFilterForm.address,
+                  expression: "mFilterForm.address"
+                }
+              ],
+              staticClass: "form-control search-field",
+              attrs: {
+                type: "text",
+                "data-default-value": "",
+                value: "",
+                name: "title",
+                placeholder: "Address, Zip, Neighborhood"
+              },
+              domProps: { value: _vm.mFilterForm.address },
+              on: {
+                keyup: function($event) {
+                  return _vm.loadHomesOnMap()
+                },
+                input: function($event) {
+                  if ($event.target.composing) {
+                    return
+                  }
+                  _vm.$set(_vm.mFilterForm, "address", $event.target.value)
+                }
+              }
+            }),
+            _vm._v(" "),
+            _vm._m(0)
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "col-md-3 col-sm-6 col-xs-12 form-group" }, [
+            _c(
+              "select",
+              {
+                directives: [
+                  {
+                    name: "model",
+                    rawName: "v-model",
+                    value: _vm.mFilterForm.type,
+                    expression: "mFilterForm.type"
+                  }
+                ],
+                staticClass: "search-field form-control",
+                attrs: {
+                  name: "type",
+                  title: "Property Types",
+                  "data-default-value": ""
+                },
+                on: {
+                  change: [
+                    function($event) {
+                      var $$selectedVal = Array.prototype.filter
+                        .call($event.target.options, function(o) {
+                          return o.selected
+                        })
+                        .map(function(o) {
+                          var val = "_value" in o ? o._value : o.value
+                          return val
+                        })
+                      _vm.$set(
+                        _vm.mFilterForm,
+                        "type",
+                        $event.target.multiple
+                          ? $$selectedVal
+                          : $$selectedVal[0]
+                      )
+                    },
+                    function($event) {
+                      return _vm.loadHomesOnMap()
+                    }
+                  ]
+                }
+              },
+              [
+                _c("option", { attrs: { value: "", selected: "" } }, [
+                  _vm._v("Property Types")
+                ]),
+                _vm._v(" "),
+                _vm._l(_vm.mType, function(t) {
+                  return _c("option", [_vm._v(_vm._s(t))])
+                })
+              ],
+              2
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "col-md-3 col-sm-6 col-xs-12 form-group" }, [
+            _c(
+              "select",
+              {
+                directives: [
+                  {
+                    name: "model",
+                    rawName: "v-model",
+                    value: _vm.mFilterForm.pNeighbour,
+                    expression: "mFilterForm.pNeighbour"
+                  }
+                ],
+                staticClass: "search-field form-control",
+                attrs: {
+                  name: "neighborhoods",
+                  title: "Neighborhoods",
+                  "data-default-value": ""
+                },
+                on: {
+                  change: [
+                    function($event) {
+                      var $$selectedVal = Array.prototype.filter
+                        .call($event.target.options, function(o) {
+                          return o.selected
+                        })
+                        .map(function(o) {
+                          var val = "_value" in o ? o._value : o.value
+                          return val
+                        })
+                      _vm.$set(
+                        _vm.mFilterForm,
+                        "pNeighbour",
+                        $event.target.multiple
+                          ? $$selectedVal
+                          : $$selectedVal[0]
+                      )
+                    },
+                    function($event) {
+                      return _vm.loadHomesOnMap()
+                    }
+                  ]
+                }
+              },
+              [
+                _c("option", { attrs: { value: "" } }, [
+                  _vm._v("Any Neighborhoods")
+                ]),
+                _vm._v(" "),
+                _vm._l(_vm.neighbours, function(neighbour) {
+                  return _c(
+                    "option",
+                    { key: neighbour.id, domProps: { value: neighbour.id } },
+                    [_vm._v(_vm._s(neighbour.title))]
+                  )
+                })
+              ],
+              2
+            )
+          ]),
+          _vm._v(" "),
+          _c("div", { staticClass: "col-md-3 col-sm-6 col-xs-12 form-group" }, [
+            _c(
+              "select",
+              {
+                directives: [
+                  {
+                    name: "model",
+                    rawName: "v-model",
+                    value: _vm.mFilterForm.price,
+                    expression: "mFilterForm.price"
+                  }
+                ],
+                staticClass: "search-field form-control",
+                attrs: {
+                  name: "price",
+                  title: "Price",
+                  "data-default-value": ""
+                },
+                on: {
+                  change: [
+                    function($event) {
+                      var $$selectedVal = Array.prototype.filter
+                        .call($event.target.options, function(o) {
+                          return o.selected
+                        })
+                        .map(function(o) {
+                          var val = "_value" in o ? o._value : o.value
+                          return val
+                        })
+                      _vm.$set(
+                        _vm.mFilterForm,
+                        "price",
+                        $event.target.multiple
+                          ? $$selectedVal
+                          : $$selectedVal[0]
+                      )
+                    },
+                    function($event) {
+                      return _vm.loadHomesOnMap()
+                    }
+                  ]
+                }
+              },
+              [
+                _c("option", [_vm._v("Any Price")]),
+                _vm._v(" "),
+                _vm._l(_vm.mPrice, function(p) {
+                  return _c("option", { domProps: { value: (p[0], p[1]) } }, [
+                    _vm._v("$" + _vm._s(p[0]) + " - $" + _vm._s(p[1]))
+                  ])
+                })
+              ],
+              2
+            )
+          ])
+        ])
+      ]),
       _vm._v(" "),
-      _c("google-map", {
-        staticStyle: { width: "100%", height: "500px" },
-        attrs: { center: _vm.mapICenter, zoom: 9 }
-      })
+      _c(
+        "google-map",
+        {
+          staticStyle: { width: "100%", height: "500px" },
+          attrs: { center: _vm.mapICenter, zoom: 14 }
+        },
+        _vm._l(_vm.homes, function(home, index) {
+          return _c(
+            "gmap-custom-marker",
+            {
+              key: index,
+              attrs: { marker: { lat: home.lat, lng: home.lng } },
+              nativeOn: {
+                click: function($event) {
+                  return _vm.toggleInfoWindow(home, index)
+                }
+              }
+            },
+            [
+              _c("img", {
+                staticClass: "pin-img",
+                attrs: { src: "vue/images/icons/map-marker-2.png" }
+              }),
+              _vm._v(" "),
+              _c(
+                "gmap-info-window",
+                {
+                  attrs: {
+                    options: _vm.infoOptions,
+                    position: _vm.infoWindowPos,
+                    opened: _vm.infoWinOpen
+                  },
+                  on: {
+                    closeclick: function($event) {
+                      _vm.infoWinOpen = false
+                    }
+                  }
+                },
+                [
+                  _c("div", {
+                    domProps: { innerHTML: _vm._s(_vm.infoContent) }
+                  })
+                ]
+              )
+            ],
+            1
+          )
+        }),
+        1
+      )
     ],
     1
   )
@@ -44510,84 +44834,8 @@ var staticRenderFns = [
     var _vm = this
     var _h = _vm.$createElement
     var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "container" }, [
-      _c("div", { staticClass: "row" }, [
-        _c("div", { staticClass: "col-md-3 col-sm-6 col-xs-12 form-group" }, [
-          _c("input", {
-            staticClass: "form-control search-field",
-            attrs: {
-              type: "text",
-              "data-default-value": "",
-              value: "",
-              name: "title",
-              placeholder: "Address, Zip, Neighborhood"
-            }
-          }),
-          _vm._v(" "),
-          _c("a", { attrs: { href: "#" } }, [
-            _c("i", { staticClass: "icon-search2" })
-          ])
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "col-md-3 col-sm-6 col-xs-12 form-group" }, [
-          _c(
-            "select",
-            {
-              staticClass: "search-field form-control",
-              attrs: {
-                name: "type",
-                title: "Property Types",
-                "data-default-value": ""
-              }
-            },
-            [
-              _c("option", { attrs: { value: "apartment" } }, [
-                _vm._v("Apartment")
-              ]),
-              _vm._v(">\n          "),
-              _c("option", { attrs: { value: "", selected: "" } }, [
-                _vm._v("Property Types")
-              ])
-            ]
-          )
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "col-md-3 col-sm-6 col-xs-12 form-group" }, [
-          _c(
-            "select",
-            {
-              staticClass: "search-field form-control",
-              attrs: {
-                name: "neighborhoods",
-                title: "Neighborhoods",
-                "data-default-value": ""
-              }
-            },
-            [
-              _c("option", { attrs: { value: "" } }, [
-                _vm._v("Any Neighborhoods")
-              ]),
-              _vm._v(" "),
-              _c("option", { attrs: { value: "1" } }, [_vm._v("Schools")])
-            ]
-          )
-        ]),
-        _vm._v(" "),
-        _c("div", { staticClass: "col-md-3 col-sm-6 col-xs-12 form-group" }, [
-          _c(
-            "select",
-            {
-              staticClass: "search-field form-control",
-              attrs: { name: "price", title: "Price", "data-default-value": "" }
-            },
-            [
-              _c("option", { attrs: { value: "" } }, [_vm._v("Any Price")]),
-              _vm._v(" "),
-              _c("option", { attrs: { value: "1000" } }, [_vm._v("$1,000")])
-            ]
-          )
-        ])
-      ])
+    return _c("a", { attrs: { href: "#" } }, [
+      _c("i", { staticClass: "icon-search2" })
     ])
   }
 ]
